@@ -1,14 +1,17 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.serialisation)
 }
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
-            }
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     
@@ -16,27 +19,41 @@ kotlin {
         iosX64(),
         iosArm64(),
         iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "shared"
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "Shared"
             isStatic = true
         }
     }
-
+    
     sourceSets {
         commonMain.dependencies {
-            //put your multiplatform dependencies here
-        }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.serialisation)
         }
     }
 }
 
 android {
-    namespace = "com.gymtracker"
-    compileSdk = 34
+    namespace = "com.gymtracker.shared"
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
     defaultConfig {
-        minSdk = 29
+        minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+
+    sourceSets {
+        val main by getting
+        main.java.setSrcDirs(listOf("src/androidMain/kotlin"))
+        main.res.setSrcDirs(listOf("src/androidMain/res"))
+        main.resources.setSrcDirs(
+            listOf(
+                "src/androidMain/resources",
+                "src/commonMain/resources",
+            )
+        )
+        main.manifest.srcFile("src/androidMain/AndroidManifest.xml")
     }
 }
